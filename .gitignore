@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Data (too large for git — models are kept)
+data/raw_sensor_data.csv
+data/X_train.csv
+data/X_test.csv
+data/y_train.csv
+data/y_test.csv
+
+# Reports (generated images — not needed on server)
+reports/
+
+# Local only
+*.bat

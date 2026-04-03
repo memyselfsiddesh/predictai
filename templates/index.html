@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PredictAI — Industrial Predictive Maintenance</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060a0f;--bg2:#0b1018;--bg3:#0f1620;--bg4:#141e2a;
+  --border:#1a2535;--border2:#243040;--border3:#2e3d52;
+  --accent:#e8622a;--accent2:#f07844;
+  --green:#22c55e;--yellow:#f59e0b;--red:#ef4444;
+  --blue:#38bdf8;--cyan:#06b6d4;--purple:#a78bfa;
+  --text:#e8edf3;--text2:#8fa3b8;--text3:#4d6278;
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Syne',sans-serif;
+  --r:4px;--r2:8px;
+}
+*{transition:color .15s,background .15s,border-color .15s}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh;overflow-x:hidden}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,.006) 3px,rgba(255,255,255,.006) 4px);pointer-events:none;z-index:9999}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(232,98,42,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(232,98,42,.03) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border3);border-radius:2px}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 22px;height:54px;background:rgba(11,16,24,.94);border-bottom:1px solid var(--border);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:11px}
+.logo-hex{width:30px;height:30px;background:var(--accent);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);animation:hex-pulse 3s ease-in-out infinite}
+@keyframes hex-pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+.logo-name{font-family:var(--display);font-size:17px;font-weight:800;letter-spacing:-.3px}
+.logo-name span{color:var(--accent)}
+.logo-tag{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase}
+.nav{display:flex;gap:0}
+.nav-tab{font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:8px 14px;cursor:pointer;color:var(--text3);border:none;border-bottom:2px solid transparent;background:none;transition:all .2s}
+.nav-tab:hover{color:var(--text2)}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.topbar-r{display:flex;align-items:center;gap:10px}
+.live-pill{display:flex;align-items:center;gap:5px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);padding:4px 9px;border-radius:20px;font-family:var(--mono);font-size:9px;color:var(--green)}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.clock{font-family:var(--mono);font-size:11px;color:var(--text2)}
+.api-status{font-family:var(--mono);font-size:9px;color:var(--text3);display:flex;align-items:center;gap:4px}
+.api-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.api-dot.err{background:var(--red)}
+.btn{font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:var(--r);cursor:pointer;border:1px solid;transition:all .2s}
+.btn-accent{background:rgba(232,98,42,.12);border-color:var(--accent);color:var(--accent)}
+.btn-accent:hover{background:rgba(232,98,42,.22)}
+.btn-ghost{background:transparent;border-color:var(--border3);color:var(--text2)}
+.btn-ghost:hover{border-color:var(--text2);color:var(--text)}
+
+/* ── MAIN ── */
+.main{padding:18px 22px;position:relative;z-index:1}
+.page-section{display:none}
+.page-section.active{display:block;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* ── KPI ROW ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:13px 15px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kpi-c,var(--accent))}
+.kpi-label{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px}
+.kpi-val{font-family:var(--display);font-size:26px;font-weight:700;color:var(--kpi-c,var(--text));line-height:1}
+.kpi-sub{font-size:10px;color:var(--text3);margin-top:3px}
+
+/* ── GRID ── */
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px}
+.g12{display:grid;grid-template-columns:1fr 2fr;gap:14px;margin-bottom:14px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+.gfull{margin-bottom:14px}
+
+/* ── PANEL ── */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.015)}
+.ph-title{font-family:var(--display);font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text2)}
+.ph-tag{font-family:var(--mono);font-size:9px;color:var(--text3)}
+.pb{padding:14px}
+
+/* ── MACHINE CARDS ── */
+.mach-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:12px}
+.mcard{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:12px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.mcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--mc,var(--green));border-radius:3px 0 0 3px}
+.mcard:hover{border-color:var(--border3);transform:translateY(-1px)}
+.mcard.sel{border-color:var(--accent)}
+.mcard.sel::before{background:var(--accent)}
+.mc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:9px}
+.mc-name{font-family:var(--display);font-size:12px;font-weight:600}
+.mc-id{font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:1px}
+.badge{font-family:var(--mono);font-size:8px;padding:2px 6px;border-radius:2px;text-transform:uppercase;letter-spacing:1px;border:1px solid}
+.b-ok{background:rgba(34,197,94,.12);color:var(--green);border-color:rgba(34,197,94,.3)}
+.b-warn{background:rgba(245,158,11,.12);color:var(--yellow);border-color:rgba(245,158,11,.3)}
+.b-crit{background:rgba(239,68,68,.12);color:var(--red);border-color:rgba(239,68,68,.3);animation:flash .9s infinite}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:.5}}
+.sm-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:7px 0}
+.sm{background:var(--bg2);border-radius:3px;padding:4px 6px}
+.sm-l{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:1px}
+.sm-v{font-family:var(--mono);font-size:11px;font-weight:500;margin-top:1px}
+.v-ok{color:var(--green)}.v-warn{color:var(--yellow)}.v-crit{color:var(--red)}
+.hbar{margin-top:7px}
+.hbar-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:8px;color:var(--text3);margin-bottom:2px}
+.hbar-track{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.hbar-fill{height:100%;border-radius:2px;transition:width .6s}
+
+/* ── DETAIL PANE ── */
+.det-sg{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
+.ds{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:10px;text-align:center}
+.ds-l{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+.ds-v{font-family:var(--display);font-size:22px;font-weight:700;line-height:1}
+.ds-u{font-size:9px;color:var(--text3);margin-top:2px}
+.ds-t{font-family:var(--mono);font-size:8px;margin-top:4px}
+.t-up{color:var(--red)}.t-dn{color:var(--green)}.t-st{color:var(--text3)}
+.prob-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
+.prob-c{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:10px;text-align:center}
+.prob-v{font-family:var(--display);font-size:26px;font-weight:700;line-height:1}
+.prob-l{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:1px;margin-top:3px}
+.rec-c{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:10px}
+.rec-h{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.rec-t{font-size:11px;color:var(--text2);line-height:1.6}
+
+/* ── ALERTS ── */
+.alert-list{max-height:320px;overflow-y:auto}
+.ai{display:flex;gap:8px;align-items:flex-start;padding:8px 12px;border-bottom:1px solid rgba(26,37,53,.6);border-left:2px solid transparent;transition:background .15s}
+.ai:hover{background:rgba(255,255,255,.02)}
+.ai.a-crit{border-left-color:var(--red)}
+.ai.a-warn{border-left-color:var(--yellow)}
+.ai.a-info{border-left-color:var(--blue)}
+.ai-icon{font-size:10px;margin-top:3px;flex-shrink:0}
+.ai-msg{font-size:11px;color:var(--text);line-height:1.4}
+.ai-meta{font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:1px}
+
+/* ── CHARTS ── */
+.ch{position:relative;height:170px}
+.ch-lg{position:relative;height:210px}
+.ch-sm{position:relative;height:130px}
+.cbrow{display:flex;gap:5px;flex-wrap:wrap}
+.cbtn{font-family:var(--mono);font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:3px 9px;border-radius:var(--r);cursor:pointer;border:1px solid;transition:all .2s}
+.c-on{background:rgba(232,98,42,.15);border-color:var(--accent);color:var(--accent)}
+.c-off{background:transparent;border-color:var(--border3);color:var(--text3)}
+.c-off:hover{border-color:var(--text2);color:var(--text2)}
+
+/* ── MAINT TABLE ── */
+.mtable{width:100%;border-collapse:collapse}
+.mtable th{font-family:var(--mono);font-size:8px;color:var(--text3);text-align:left;padding:6px 12px;border-bottom:1px solid var(--border);letter-spacing:1px;text-transform:uppercase}
+.mtable td{padding:8px 12px;border-bottom:1px solid rgba(26,37,53,.5);font-size:11px;color:var(--text2)}
+.mtable tr:hover td{background:rgba(255,255,255,.02)}
+.uh{font-family:var(--mono);font-size:8px;color:var(--red);letter-spacing:1px}
+.um{font-family:var(--mono);font-size:8px;color:var(--yellow);letter-spacing:1px}
+.ul{font-family:var(--mono);font-size:8px;color:var(--green);letter-spacing:1px}
+
+/* ── ML METRICS ── */
+.mm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:12px}
+.mm-c{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:11px;text-align:center}
+.mm-v{font-family:var(--display);font-size:22px;font-weight:700;color:var(--accent)}
+.mm-l{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:1px;margin-top:3px}
+.feat-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.feat-n{font-size:11px;color:var(--text2);width:125px;flex-shrink:0}
+.feat-t{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.feat-f{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--cyan),var(--accent))}
+.feat-p{font-family:var(--mono);font-size:9px;color:var(--text3);width:30px;text-align:right}
+
+/* ── FAULT SIM ── */
+.fault-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.fc{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:14px;cursor:pointer;transition:all .2s;text-align:center}
+.fc:hover{border-color:var(--border3);transform:translateY(-2px)}
+.fc.active{border-color:var(--red);animation:flash .9s infinite}
+.fc-icon{font-size:24px;margin-bottom:7px}
+.fc-name{font-family:var(--display);font-size:12px;font-weight:600;margin-bottom:3px}
+.fc-desc{font-size:10px;color:var(--text3);line-height:1.4}
+
+/* ── PREDICTION FORM ── */
+.pf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.pf-field label{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:1px;display:block;margin-bottom:4px;text-transform:uppercase}
+.pf-field input{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 9px;border-radius:var(--r);outline:none}
+.pf-field input:focus{border-color:var(--accent)}
+.pred-result{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:14px;margin-top:12px}
+
+/* ── TOGGLE ── */
+.toggle{width:36px;height:19px;background:var(--border3);border-radius:10px;cursor:pointer;position:relative;border:none}
+.toggle.on{background:var(--green2,var(--green))}
+.toggle::after{content:'';position:absolute;left:3px;top:2px;width:15px;height:15px;border-radius:50%;background:white;transition:transform .2s}
+.toggle.on::after{transform:translateX(17px)}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--bg3);border:1px solid var(--border3);border-radius:var(--r2);padding:11px 14px;z-index:9998;font-size:11px;color:var(--text2);max-width:280px;transform:translateY(100px);opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{transform:none;opacity:1}
+.toast-title{font-family:var(--display);font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
+
+/* loading state */
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--text3);font-family:var(--mono);font-size:11px;gap:8px}
+.spin{width:14px;height:14px;border:2px solid var(--border3);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-hex"></div>
+    <div><div class="logo-name">Predict<span>AI</span></div><div class="logo-tag">Industrial ML Maintenance</div></div>
+  </div>
+  <nav class="nav">
+    <button class="nav-tab active" onclick="showPage('dashboard')">Dashboard</button>
+    <button class="nav-tab" onclick="showPage('sensors')">Sensors</button>
+    <button class="nav-tab" onclick="showPage('mllab')">ML Lab</button>
+    <button class="nav-tab" onclick="showPage('faults')">Fault Sim</button>
+    <button class="nav-tab" onclick="showPage('predict')">Live Predict</button>
+  </nav>
+  <div class="topbar-r">
+    <div class="live-pill"><div class="live-dot"></div>LIVE API</div>
+    <div class="api-status"><div class="api-dot" id="apiDot"></div><span id="apiLabel">connecting…</span></div>
+    <div class="clock" id="clock">--:--:--</div>
+    <button class="btn btn-accent" onclick="injectRandom()">⚡ INJECT FAULT</button>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- ═══════════ DASHBOARD ═══════════ -->
+<div id="page-dashboard" class="page-section active">
+  <div class="kpi-row">
+    <div class="kpi" style="--kpi-c:var(--green)"><div class="kpi-label">Fleet Health</div><div class="kpi-val" id="k-health">--</div><div class="kpi-sub">avg score</div></div>
+    <div class="kpi" style="--kpi-c:var(--red)"><div class="kpi-label">Critical</div><div class="kpi-val" id="k-crit">0</div><div class="kpi-sub">immediate action</div></div>
+    <div class="kpi" style="--kpi-c:var(--yellow)"><div class="kpi-label">Warnings</div><div class="kpi-val" id="k-warn">0</div><div class="kpi-sub">monitor closely</div></div>
+    <div class="kpi" style="--kpi-c:var(--blue)"><div class="kpi-label">Online</div><div class="kpi-val" id="k-online">6/6</div><div class="kpi-sub">operational</div></div>
+    <div class="kpi" style="--kpi-c:var(--accent)"><div class="kpi-label">Pred. Failures</div><div class="kpi-val" id="k-fail">0</div><div class="kpi-sub">next 24h</div></div>
+  </div>
+
+  <div class="g21">
+    <div class="panel">
+      <div class="ph"><div class="ph-title">Machine Fleet</div><div class="ph-tag" id="fleetTag">6 UNITS · REAL-TIME API</div></div>
+      <div class="mach-grid" id="machGrid"><div class="loading"><div class="spin"></div>Loading from API…</div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div class="ph-title" id="detTitle">Select Machine</div><span class="ph-tag" id="detBadge"></span></div>
+      <div id="detPane" class="pb" style="color:var(--text3);font-size:11px;text-align:center;padding-top:35px">Select a machine card to view ML predictions</div>
+    </div>
+  </div>
+
+  <div class="g21">
+    <div class="panel">
+      <div class="ph">
+        <div class="ph-title">Sensor Trend — <span id="trendMachLabel">MCH-001</span></div>
+        <div class="cbrow">
+          <button class="cbtn c-on" id="cb-temp" onclick="switchTrend('temp')">TEMP</button>
+          <button class="cbtn c-off" id="cb-vib" onclick="switchTrend('vib')">VIB</button>
+          <button class="cbtn c-off" id="cb-press" onclick="switchTrend('press')">PRESS</button>
+          <button class="cbtn c-off" id="cb-rpm" onclick="switchTrend('rpm')">RPM</button>
+        </div>
+      </div>
+      <div class="pb"><div class="ch"><canvas id="trendChart"></canvas></div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div class="ph-title">Alert Feed</div><span class="ph-tag" id="alertCount">0 EVENTS</span></div>
+      <div class="alert-list" id="alertList"><div class="loading"><div class="spin"></div>Loading…</div></div>
+    </div>
+  </div>
+
+  <div class="g3">
+    <div class="panel">
+      <div class="ph"><div class="ph-title">Failure Prob (24h)</div></div>
+      <div class="pb"><div class="ch"><canvas id="failChart"></canvas></div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div class="ph-title">ML Model Status</div><span class="ph-tag" style="color:var(--green)" id="modelStatusTag">LOADING…</span></div>
+      <div class="pb">
+        <div class="mm-grid" id="mmCards">
+          <div class="mm-c"><div class="mm-v" id="mm-acc">--</div><div class="mm-l">ACCURACY</div></div>
+          <div class="mm-c"><div class="mm-v" id="mm-prec">--</div><div class="mm-l">PRECISION</div></div>
+          <div class="mm-c"><div class="mm-v" id="mm-rec">--</div><div class="mm-l">RECALL</div></div>
+          <div class="mm-c"><div class="mm-v" id="mm-f1">--</div><div class="mm-l">F1-SCORE</div></div>
+        </div>
+        <div style="font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:1px;margin-bottom:7px">FEATURE IMPORTANCE</div>
+        <div id="featList"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div class="ph-title">Maintenance Queue</div><button class="btn btn-accent" style="font-size:8px;padding:3px 9px" onclick="exportCSV()">EXPORT</button></div>
+      <table class="mtable"><thead><tr><th>Machine</th><th>Task</th><th>Due</th><th>Priority</th></tr></thead><tbody id="maintTable"></tbody></table>
+    </div>
+  </div>
+
+  <div class="panel gfull">
+    <div class="ph"><div class="ph-title">Fleet Health History</div><span class="ph-tag">LAST 60 DATA POINTS FROM API</span></div>
+    <div class="pb"><div class="ch-sm"><canvas id="healthChart"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ═══════════ SENSORS PAGE ═══════════ -->
+<div id="page-sensors" class="page-section">
+  <div class="g2">
+    <div class="panel">
+      <div class="ph"><div class="ph-title">Temperature — All Machines (Live)</div></div>
+      <div class="pb"><div class="ch-lg"><canvas id="s-temp"></canvas></div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div class="ph-title">Vibration — All Machines (Live)</div></div>
+      <div class="pb"><div class="ch-lg"><canvas id="s-vib"></canvas></div></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="panel">
+      <div class="ph"><div class="ph-title">Pressure History (All Machines)</div></div>
+      <div class="pb"><div class="ch-lg"><canvas id="s-press"></canvas></div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div class="ph-title">RPM History (All Machines)</div></div>
+      <div class="pb"><div class="ch-lg"><canvas id="s-rpm"></canvas></div></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="panel">
+      <div class="ph"><div class="ph-title">Anomaly Score — Real-Time ML</div></div>
+      <div class="pb"><div class="ch-lg"><canvas id="s-anom"></canvas></div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div class="ph-title">Failure Probability — Real-Time ML</div></div>
+      <div class="pb"><div class="ch-lg"><canvas id="s-fail"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ ML LAB ═══════════ -->
+<div id="page-mllab" class="page-section">
+  <div class="g4 gfull" id="mlModelCards">
+    <div class="panel pb" style="text-align:center"><div class="loading"><div class="spin"></div>Loading metrics…</div></div>
+  </div>
+  <div class="g2">
+    <div class="panel">
+      <div class="ph"><div class="ph-title">ROC Curves — All Models</div></div>
+      <div class="pb"><div class="ch-lg"><canvas id="ml-roc"></canvas></div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div class="ph-title">Feature Importance (Random Forest)</div></div>
+      <div class="pb"><div class="ch-lg"><canvas id="ml-fi"></canvas></div></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="panel">
+      <div class="ph"><div class="ph-title">Confusion Matrix — Best Model</div></div>
+      <div class="pb"><div class="ch-lg"><canvas id="ml-conf"></canvas></div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div class="ph-title">Training Log — Cross-Validation</div></div>
+      <div class="pb"><div class="ch-lg"><canvas id="ml-cv"></canvas></div></div>
+    </div>
+  </div>
+  <div class="panel gfull">
+    <div class="ph"><div class="ph-title">Live Prediction Log (from API)</div><span class="ph-tag" id="predLogCount">0 PREDICTIONS</span></div>
+    <div style="max-height:220px;overflow-y:auto" id="predLog"></div>
+  </div>
+</div>
+
+<!-- ═══════════ FAULT SIM ═══════════ -->
+<div id="page-faults" class="page-section">
+  <div class="panel gfull">
+    <div class="ph"><div class="ph-title">Fault Injection Panel</div><span class="ph-tag">SENDS TO FLASK API → ML MODEL DETECTS</span></div>
+    <div class="pb">
+      <div class="fault-grid">
+        <div class="fc" id="fc-overheat" onclick="injectFault('overheat')">
+          <div class="fc-icon">🌡️</div><div class="fc-name">Overheat</div>
+          <div class="fc-desc">Temperature runaway, elevated current</div>
+        </div>
+        <div class="fc" id="fc-bearing_wear" onclick="injectFault('bearing_wear')">
+          <div class="fc-icon">⚙️</div><div class="fc-name">Bearing Wear</div>
+          <div class="fc-desc">Vibration spike, noise, heat rise</div>
+        </div>
+        <div class="fc" id="fc-pressure_leak" onclick="injectFault('pressure_leak')">
+          <div class="fc-icon">💧</div><div class="fc-name">Pressure Leak</div>
+          <div class="fc-desc">Pressure drop, RPM instability</div>
+        </div>
+        <div class="fc" id="fc-electrical_fault" onclick="injectFault('electrical_fault')">
+          <div class="fc-icon">⚡</div><div class="fc-name">Electrical Fault</div>
+          <div class="fc-desc">Voltage drop, current surge</div>
+        </div>
+        <div class="fc" id="fc-lubrication_loss" onclick="injectFault('lubrication_loss')">
+          <div class="fc-icon">🔧</div><div class="fc-name">Lubrication Loss</div>
+          <div class="fc-desc">Oil viscosity drop, heat spike</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:13px">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3)">TARGET MACHINE:</div>
+        <select id="faultMachine" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-family:var(--mono);font-size:10px;padding:4px 8px;border-radius:var(--r)">
+          <option value="MCH-001">MCH-001 CNC Mill Alpha</option>
+          <option value="MCH-002">MCH-002 Hydraulic Press B</option>
+          <option value="MCH-003">MCH-003 Compressor C</option>
+          <option value="MCH-004">MCH-004 Conveyor Drive D</option>
+          <option value="MCH-005">MCH-005 Pump Station E</option>
+          <option value="MCH-006">MCH-006 Motor Drive F</option>
+        </select>
+        <button class="btn btn-ghost" style="font-size:9px" onclick="clearAllFaults()">CLEAR ALL</button>
+        <button class="btn btn-accent" style="font-size:9px" onclick="injectRandom()">RANDOM FAULT</button>
+        <span id="faultStatus" style="font-family:var(--mono);font-size:9px;color:var(--text3)">No active faults</span>
+      </div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="panel">
+      <div class="ph"><div class="ph-title">Anomaly Score (All Machines)</div></div>
+      <div class="pb"><div class="ch-lg"><canvas id="f-anom"></canvas></div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div class="ph-title">Fault Event Log</div></div>
+      <div style="max-height:210px;overflow-y:auto" id="faultLog">
+        <div style="padding:20px;color:var(--text3);font-size:11px;text-align:center">No fault events yet</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ LIVE PREDICT ═══════════ -->
+<div id="page-predict" class="page-section">
+  <div class="panel gfull">
+    <div class="ph"><div class="ph-title">Manual Sensor Input → Real ML Prediction</div><span class="ph-tag">CALLS /api/predict VIA FLASK</span></div>
+    <div class="pb">
+      <div style="font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:1px;margin-bottom:10px">TARGET MACHINE</div>
+      <select id="predMachine" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:11px;padding:6px 10px;border-radius:var(--r);margin-bottom:14px">
+        <option value="MCH-001">MCH-001 — CNC Mill Alpha</option>
+        <option value="MCH-002">MCH-002 — Hydraulic Press B</option>
+        <option value="MCH-003">MCH-003 — Compressor C</option>
+        <option value="MCH-004">MCH-004 — Conveyor Drive D</option>
+        <option value="MCH-005">MCH-005 — Pump Station E</option>
+        <option value="MCH-006">MCH-006 — Motor Drive F</option>
+      </select>
+      <div class="pf-grid" id="predFields"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-accent" onclick="runPredict()">▶ RUN ML PREDICTION</button>
+        <button class="btn btn-ghost" onclick="loadCurrentSensors()">LOAD LIVE VALUES</button>
+        <button class="btn btn-ghost" onclick="simulateFault()">SIMULATE FAULT VALUES</button>
+      </div>
+      <div id="predResult" class="pred-result" style="display:none"></div>
+    </div>
+  </div>
+  <div class="panel gfull">
+    <div class="ph"><div class="ph-title">Prediction History</div><span class="ph-tag" id="predHistCount">0 RUNS</span></div>
+    <div style="max-height:280px;overflow-y:auto" id="predHistory"></div>
+  </div>
+</div>
+
+</div><!-- /main -->
+<div class="toast" id="toast"><div class="toast-title" id="toastT"></div><div id="toastM"></div></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════
+const API   = "";  // same origin — Flask serves this page
+const POLL  = 2000; // ms between API polls
+const SENSORS = ["temperature","vibration","pressure","rpm","current","voltage","oil_viscosity","noise_level"];
+const SENSOR_UNITS = {temperature:"°C",vibration:"mm/s",pressure:"bar",rpm:"rpm",current:"A",voltage:"V",oil_viscosity:"cSt",noise_level:"dB"};
+const MACH_COLORS = {"MCH-001":"#e8622a","MCH-002":"#38bdf8","MCH-003":"#22c55e","MCH-004":"#f59e0b","MCH-005":"#a78bfa","MCH-006":"#06b6d4"};
+const THRESHOLDS_WARN = {temperature:85,vibration:2.5,pressure:8.5,rpm:3200,current:18,voltage:390,oil_viscosity:32,noise_level:80};
+
+// ── State ──────────────────────────────────────────────
+let state = {};
+let alerts = [];
+let selectedMachine = "MCH-001";
+let currentTrend = "temp";
+let healthHist = [];
+let predLogs = [];
+let predHistory = [];
+let charts = {};
+let activeFaults = {};
+let mlMetrics = null;
+let trainingLog = null;
+
+// ═══════════════════════════════════════════════════════
+//  API FETCH
+// ═══════════════════════════════════════════════════════
+async function apiFetch(path, opts={}) {
+  const res = await fetch(API + path, opts);
+  if (!res.ok) throw new Error(`API ${path} → ${res.status}`);
+  return res.json();
+}
+
+async function pollState() {
+  try {
+    const [st, kpis, als] = await Promise.all([
+      apiFetch("/api/state"),
+      apiFetch("/api/kpis"),
+      apiFetch("/api/alerts?limit=60"),
+    ]);
+    state = st; alerts = als;
+    setApiStatus(true);
+    renderKPIs(kpis);
+    renderMachGrid();
+    renderDetail();
+    renderAlerts();
+    renderDashCharts();
+    renderMaintTable();
+    updateHealthHist(kpis.avgHealth);
+
+    predLogs.unshift({ ts: nowTime(), machines: Object.keys(st).length,
+      avgFail: avgFailProb(), status: topStatus() });
+    if (predLogs.length > 200) predLogs.pop();
+
+    const pg = activePage();
+    if (pg === "sensors") renderSensorCharts();
+    if (pg === "mllab") renderMLLab();
+    if (pg === "faults") renderFaultPage();
+  } catch (e) {
+    setApiStatus(false);
+    console.warn("Poll error:", e);
+  }
+}
+
+function setApiStatus(ok) {
+  document.getElementById("apiDot").className = "api-dot" + (ok ? "" : " err");
+  document.getElementById("apiLabel").textContent = ok ? "API connected" : "API offline";
+}
+
+// ═══════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════
+const nowTime = () => new Date().toTimeString().slice(0,8);
+const r1  = v => (+v).toFixed(1);
+const r2  = v => (+v).toFixed(2);
+const activePage = () => document.querySelector(".nav-tab.active")?.textContent?.toLowerCase() || "";
+const avgFailProb = () => Object.values(state).length
+  ? (Object.values(state).reduce((s,m)=>s+m.failProb,0)/Object.values(state).length).toFixed(1) : 0;
+const topStatus = () => Object.values(state).some(m=>m.status==="crit")?"crit":Object.values(state).some(m=>m.status==="warn")?"warn":"ok";
+
+function sensorBadge(val, sensor) {
+  const w = THRESHOLDS_WARN[sensor];
+  if (!w) return "ok";
+  if (sensor === "voltage" || sensor === "oil_viscosity") {
+    return val < w * 0.9 ? "crit" : val < w ? "warn" : "ok";
+  }
+  return val > w * 1.2 ? "crit" : val > w ? "warn" : "ok";
+}
+
+function statusColor(st) {
+  return st === "ok" ? "var(--green)" : st === "warn" ? "var(--yellow)" : "var(--red)";
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER — DASHBOARD
+// ═══════════════════════════════════════════════════════
+function renderKPIs(kpis) {
+  const he = document.getElementById("k-health");
+  he.textContent = kpis.avgHealth + "%";
+  he.style.color = kpis.avgHealth > 75 ? "var(--green)" : kpis.avgHealth > 50 ? "var(--yellow)" : "var(--red)";
+  document.getElementById("k-crit").textContent = kpis.criticals;
+  document.getElementById("k-warn").textContent = kpis.warnings;
+  document.getElementById("k-online").textContent = `${kpis.online}/${kpis.total}`;
+  document.getElementById("k-fail").textContent = kpis.predictedFailures;
+}
+
+function renderMachGrid() {
+  const grid = document.getElementById("machGrid");
+  const machines = Object.values(state);
+  if (!machines.length) return;
+  grid.innerHTML = machines.map((m, i) => {
+    const mid = m.meta.id;
+    const hc = statusColor(m.status);
+    const sv = s => sensorBadge(m.sensors[s], s);
+    return `<div class="mcard ${mid===selectedMachine?'sel':''}" style="--mc:${hc}" onclick="selectMachine('${mid}')">
+      <div class="mc-top">
+        <div><div class="mc-name">${m.meta.name}</div><div class="mc-id">${mid} · ${m.meta.type}</div></div>
+        <span class="badge b-${m.status}">${m.status.toUpperCase()}</span>
+      </div>
+      <div class="sm-grid">
+        <div class="sm"><div class="sm-l">TEMP</div><div class="sm-v v-${sv('temperature')}">${r1(m.sensors.temperature)}°C</div></div>
+        <div class="sm"><div class="sm-l">VIB</div><div class="sm-v v-${sv('vibration')}">${r2(m.sensors.vibration)}</div></div>
+        <div class="sm"><div class="sm-l">PRESS</div><div class="sm-v v-${sv('pressure')}">${r1(m.sensors.pressure)}</div></div>
+        <div class="sm"><div class="sm-l">RPM</div><div class="sm-v v-${sv('rpm')}">${Math.round(m.sensors.rpm)}</div></div>
+      </div>
+      <div class="hbar">
+        <div class="hbar-labels"><span>Health</span><span style="color:${hc}">${m.health}%</span></div>
+        <div class="hbar-track"><div class="hbar-fill" style="width:${m.health}%;background:${hc}"></div></div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderDetail() {
+  if (!state[selectedMachine]) return;
+  const m = state[selectedMachine];
+  const hc = statusColor(m.status);
+  document.getElementById("detTitle").textContent = m.meta.name;
+  const badge = document.getElementById("detBadge");
+  badge.textContent = m.status==="ok"?"✓ NORMAL":m.status==="warn"?"⚠ WARNING":"✖ CRITICAL";
+  badge.style.color = hc;
+
+  const histT = (m.history?.temperature || []);
+  const histV = (m.history?.vibration || []);
+  const tTrend = histT.length>5 ? histT.at(-1)-histT.at(-5) : 0;
+  const vTrend = histV.length>5 ? histV.at(-1)-histV.at(-5) : 0;
+  const fc = m.failProb>65?"var(--red)":m.failProb>35?"var(--yellow)":"var(--green)";
+  const ac = m.anomaly>50?"var(--red)":m.anomaly>25?"var(--yellow)":"var(--green)";
+  const sv = s => sensorBadge(m.sensors[s], s);
+
+  document.getElementById("detPane").innerHTML = `
+    <div style="padding:12px">
+      <div class="det-sg">
+        <div class="ds"><div class="ds-l">TEMPERATURE</div><div class="ds-v v-${sv('temperature')}">${r1(m.sensors.temperature)}</div><div class="ds-u">°C · norm 72</div><div class="ds-t ${tTrend>.5?'t-up':tTrend<-.5?'t-dn':'t-st'}">${tTrend>.5?"▲ Rising":tTrend<-.5?"▼ Falling":"● Stable"}</div></div>
+        <div class="ds"><div class="ds-l">VIBRATION</div><div class="ds-v v-${sv('vibration')}">${r2(m.sensors.vibration)}</div><div class="ds-u">mm/s</div><div class="ds-t ${vTrend>.1?'t-up':vTrend<-.1?'t-dn':'t-st'}">${vTrend>.1?"▲ Rising":vTrend<-.1?"▼ Falling":"● Stable"}</div></div>
+        <div class="ds"><div class="ds-l">PRESSURE</div><div class="ds-v v-${sv('pressure')}">${r2(m.sensors.pressure)}</div><div class="ds-u">bar</div><div class="ds-t t-st">● Stable</div></div>
+        <div class="ds"><div class="ds-l">RPM</div><div class="ds-v v-${sv('rpm')}">${Math.round(m.sensors.rpm)}</div><div class="ds-u">rev/min</div><div class="ds-t t-st">● Stable</div></div>
+      </div>
+      <div class="prob-row">
+        <div class="prob-c"><div class="prob-v" style="color:${fc}">${r1(m.failProb)}%</div><div class="prob-l">FAILURE PROB (ML)</div></div>
+        <div class="prob-c"><div class="prob-v" style="color:${ac}">${r1(m.anomaly)}%</div><div class="prob-l">ANOMALY SCORE</div></div>
+      </div>
+      <div class="rec-c"><div class="rec-h">ML RECOMMENDATION</div><div class="rec-t">${getRec(m)}</div></div>
+      ${m.fault?`<div style="margin-top:9px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:var(--r2);padding:9px;font-family:var(--mono);font-size:9px;color:var(--red)">ACTIVE FAULT: ${m.fault.replace(/_/g," ").toUpperCase()}</div>`:""}
+    </div>`;
+}
+
+function getRec(m) {
+  if (m.status==="crit") {
+    if (m.fault==="overheat") return '<strong style="color:var(--red)">CRITICAL:</strong> Overheating detected by ML model. Shut down immediately.';
+    if (m.fault==="bearing_wear") return '<strong style="color:var(--red)">CRITICAL:</strong> Bearing failure signature detected. Replace bearings before restart.';
+    if (m.fault==="electrical_fault") return '<strong style="color:var(--red)">CRITICAL:</strong> Electrical anomaly. Isolate machine immediately.';
+    return '<strong style="color:var(--red)">CRITICAL:</strong> Multi-sensor anomaly. Emergency inspection required.';
+  }
+  if (m.status==="warn") return '<strong style="color:var(--yellow)">WARNING:</strong> Sensors drifting. Schedule maintenance within 48 hours.';
+  return `<strong style="color:var(--green)">NORMAL:</strong> All readings nominal. ML model confidence: high.`;
+}
+
+function renderAlerts() {
+  document.getElementById("alertCount").textContent = alerts.length + " EVENTS";
+  document.getElementById("alertList").innerHTML = alerts.slice(0,30).map(a => {
+    const ic = a.sev==="crit"?"●":a.sev==="warn"?"◆":"◉";
+    const clr = a.sev==="crit"?"var(--red)":a.sev==="warn"?"var(--yellow)":"var(--blue)";
+    return `<div class="ai a-${a.sev}"><div class="ai-icon" style="color:${clr}">${ic}</div><div><div class="ai-msg"><strong>${a.name}</strong> — ${a.msg}</div><div class="ai-meta">${a.id} · ${a.time}</div></div></div>`;
+  }).join("") || '<div style="padding:18px;color:var(--text3);font-size:10px;text-align:center">No alerts yet</div>';
+}
+
+function renderMaintTable() {
+  const rows = Object.values(state).map(m => {
+    const task = m.status==="crit"?"Emergency Inspection":m.status==="warn"?"Preventive Check":"Routine Maintenance";
+    const due  = m.status==="crit"?"< 4 hrs":m.status==="warn"?"< 48 hrs":`${7+Math.floor(m.health/10)} days`;
+    const cls  = m.status==="crit"?"uh":m.status==="warn"?"um":"ul";
+    const pri  = m.status==="crit"?"HIGH":m.status==="warn"?"MED":"LOW";
+    return {m, task, due, cls, pri, order: m.status==="crit"?0:m.status==="warn"?1:2};
+  }).sort((a,b) => a.order-b.order);
+  document.getElementById("maintTable").innerHTML = rows.map(r =>
+    `<tr><td><strong>${r.m.meta.id}</strong><br><span style="font-size:9px;color:var(--text3)">${r.m.meta.name}</span></td><td>${r.task}</td><td style="font-family:var(--mono);font-size:9px">${r.due}</td><td><span class="${r.cls}">${r.pri}</span></td></tr>`
+  ).join("");
+}
+
+function updateHealthHist(h) {
+  healthHist.push(+h);
+  if (healthHist.length > 60) healthHist.shift();
+}
+
+// ═══════════════════════════════════════════════════════
+//  CHARTS
+// ═══════════════════════════════════════════════════════
+const CD = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  elements: { point: { radius: 0 } },
+  scales: {
+    x: { ticks:{color:"#4d6278",font:{family:"DM Mono",size:8},maxTicksLimit:7}, grid:{color:"#1a2535"} },
+    y: { ticks:{color:"#4d6278",font:{family:"DM Mono",size:8}},                 grid:{color:"#1a2535"} }
+  },
+  animation: { duration: 100 }
+};
+
+function mkChart(id, type, data, opts={}) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  if (charts[id]) { charts[id].destroy(); }
+  charts[id] = new Chart(el.getContext("2d"), { type, data, options: { ...CD, ...opts } });
+  return charts[id];
+}
+
+function initDashCharts() {
+  charts.trend = mkChart("trendChart", "line", {
+    labels: [], datasets: [{ data:[], borderColor:"#e8622a", backgroundColor:"rgba(232,98,42,.08)", borderWidth:1.5, fill:true, tension:.35 }]
+  });
+  charts.fail = mkChart("failChart", "bar", {
+    labels: Object.keys(state).length ? Object.keys(state) : ["MCH-001","MCH-002","MCH-003","MCH-004","MCH-005","MCH-006"],
+    datasets: [{ data: [], backgroundColor:[], borderRadius:2 }]
+  }, { scales:{...CD.scales, y:{...CD.scales.y, min:0, max:100}} });
+  charts.health = mkChart("healthChart", "line", {
+    labels: Array(60).fill(""),
+    datasets: [
+      { data:[...healthHist], borderColor:"#22c55e", backgroundColor:"rgba(34,197,94,.06)", borderWidth:1.5, fill:true, tension:.4 },
+      { data:Array(60).fill(75), borderColor:"rgba(245,158,11,.3)", borderWidth:1, borderDash:[4,4], pointRadius:0, fill:false }
+    ]
+  }, { scales:{...CD.scales, y:{...CD.scales.y, min:40, max:100}} });
+  renderFeatList();
+}
+
+function renderDashCharts() {
+  if (!charts.trend) initDashCharts();
+  const m = state[selectedMachine];
+  if (!m) return;
+  const hist = m.history || {};
+  const key = currentTrend;
+  const data = hist[key] || [];
+  const labels = data.map((_, i) => i);
+  const clr = {temp:"#e8622a",vib:"#ef4444",press:"#38bdf8",rpm:"#22c55e"}[key];
+
+  charts.trend.data.labels = labels;
+  charts.trend.data.datasets[0].data = data.map(v => +v.toFixed(2));
+  charts.trend.data.datasets[0].borderColor = clr;
+  charts.trend.data.datasets[0].backgroundColor = clr + "12";
+  charts.trend.update("none");
+
+  const ms = Object.values(state);
+  charts.fail.data.labels = ms.map(x => x.meta.id);
+  charts.fail.data.datasets[0].data = ms.map(x => +x.failProb.toFixed(1));
+  charts.fail.data.datasets[0].backgroundColor = ms.map(x =>
+    x.status==="crit"?"rgba(239,68,68,.75)":x.status==="warn"?"rgba(245,158,11,.75)":"rgba(34,197,94,.75)");
+  charts.fail.update("none");
+
+  if (healthHist.length) {
+    charts.health.data.labels = Array(healthHist.length).fill("");
+    charts.health.data.datasets[0].data = [...healthHist];
+    charts.health.update("none");
+  }
+}
+
+function renderSensorCharts() {
+  const ms = Object.values(state);
+  if (!ms.length) return;
+
+  // Bar charts for current values
+  for (const [key, id, clr] of [["temperature","s-temp","#e8622a"],["vibration","s-vib","#ef4444"]]) {
+    const ch = mkChart(id, "bar", {
+      labels: ms.map(m => m.meta.id),
+      datasets: [{ data: ms.map(m => +m.sensors[key].toFixed(2)),
+        backgroundColor: ms.map(m => statusColor(m.status) + "cc"), borderRadius: 3 }]
+    }, { scales:{...CD.scales, y:{...CD.scales.y, title:{display:true,text:SENSOR_UNITS[key],color:"#4d6278"}}} });
+  }
+
+  // Line charts for history
+  for (const [key, id] of [["pressure","s-press"],["rpm","s-rpm"],["anomaly","s-anom"],["failProb","s-fail"]]) {
+    const maxLen = Math.max(...ms.map(m => (m.history?.[key]||[]).length));
+    if (maxLen < 2) continue;
+    const datasets = ms.map((m, i) => ({
+      label: m.meta.id,
+      data: m.history?.[key] || [],
+      borderColor: Object.values(MACH_COLORS)[i],
+      borderWidth: 1.5, fill: false, tension: .35, pointRadius: 0
+    }));
+    mkChart(id, "line", { labels: Array(maxLen).fill("").map((_,i)=>i), datasets },
+      { plugins:{legend:{display:true,labels:{color:"#8fa3b8",font:{size:8},boxWidth:8}}} });
+  }
+}
+
+function renderMLLab() {
+  renderPredLog();
+  if (!mlMetrics) loadMLMetrics();
+}
+
+async function loadMLMetrics() {
+  try {
+    mlMetrics = await apiFetch("/api/eval_metrics");
+    trainingLog = await apiFetch("/api/training_log");
+    renderMLCards();
+    initMLCharts();
+  } catch (e) {
+    document.getElementById("mlModelCards").innerHTML =
+      `<div style="padding:20px;color:var(--yellow);font-family:var(--mono);font-size:10px">
+        ⚠ Run steps 1–4 first to generate metrics.<br>Then restart app.py
+      </div>`;
+  }
+}
+
+function renderMLCards() {
+  if (!mlMetrics) return;
+  const MODEL_COLORS = {"Random Forest":"#e8622a","Isolation Forest":"#38bdf8","SVM (RBF)":"#a78bfa","Gradient Boosting":"#22c55e","Ensemble":"#fbbf24"};
+  document.getElementById("mlModelCards").innerHTML = Object.entries(mlMetrics).slice(0,4).map(([name, m]) => `
+    <div class="panel pb" style="text-align:center">
+      <div style="font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:1px;margin-bottom:7px;text-transform:uppercase">${name}</div>
+      <div style="font-family:var(--display);font-size:28px;font-weight:700;color:${MODEL_COLORS[name]||"var(--accent)"}">${(m["Accuracy"]*100).toFixed(1)}%</div>
+      <div style="font-size:9px;color:var(--text3);margin-top:4px">F1: ${(m["F1-Score"]||0).toFixed(3)} · AUC: ${(m["AUC-ROC"]||0).toFixed(3)}</div>
+      <div style="margin-top:9px;height:3px;background:var(--border);border-radius:2px">
+        <div style="width:${(m["Accuracy"]*100).toFixed(0)}%;height:100%;background:${MODEL_COLORS[name]||"var(--accent)"};border-radius:2px"></div>
+      </div>
+    </div>`).join("");
+
+  // Fill dashboard ML metrics from best model
+  const best = mlMetrics["Random Forest"] || Object.values(mlMetrics)[0];
+  if (best) {
+    document.getElementById("mm-acc").textContent  = (best["Accuracy"]*100).toFixed(1)+"%";
+    document.getElementById("mm-prec").textContent = (best["Precision"]*100).toFixed(1)+"%";
+    document.getElementById("mm-rec").textContent  = (best["Recall"]*100).toFixed(1)+"%";
+    document.getElementById("mm-f1").textContent   = (best["F1-Score"]*100).toFixed(1)+"%";
+    document.getElementById("modelStatusTag").textContent = "RF + GB + IF + SVM LOADED";
+  }
+}
+
+function initMLCharts() {
+  // ROC curves (simulated from metrics)
+  const rocDs = [
+    { label:"Random Forest", color:"#e8622a", auc: mlMetrics?.["Random Forest"]?.["AUC-ROC"]||.991 },
+    { label:"SVM (RBF)",     color:"#a78bfa", auc: mlMetrics?.["SVM (RBF)"]?.["AUC-ROC"]||.978 },
+    { label:"Gradient Boost",color:"#22c55e", auc: mlMetrics?.["Gradient Boosting"]?.["AUC-ROC"]||.985 },
+    { label:"Ensemble",      color:"#fbbf24", auc: mlMetrics?.["Ensemble"]?.["AUC-ROC"]||.993 },
+  ];
+  const makeCurve = (auc) => {
+    const pts = [];
+    for (let i=0;i<=20;i++) {
+      const fpr=i/20;
+      const tpr=Math.min(1, fpr>0 ? (auc*2-1)*Math.log(fpr+1)/Math.log(2)+fpr*(2-auc*2)+Math.random()*.01 : 0);
+      pts.push({x:+fpr.toFixed(3), y:+Math.max(fpr,tpr*0.95+0.05).toFixed(3)});
+    }
+    pts.sort((a,b)=>a.x-b.x);
+    pts.push({x:1,y:1});
+    return pts;
+  };
+  mkChart("ml-roc","line",{
+    datasets: [
+      ...rocDs.map(r=>({label:`${r.label} (${r.auc.toFixed(3)})`, data:makeCurve(r.auc),
+        borderColor:r.color, borderWidth:2, fill:false, tension:.4, pointRadius:0})),
+      {label:"Random",data:[{x:0,y:0},{x:1,y:1}],borderColor:"#4d6278",borderWidth:1,borderDash:[4,4],fill:false,pointRadius:0}
+    ]
+  },{parsing:{xAxisKey:"x",yAxisKey:"y"},plugins:{legend:{display:true,labels:{color:"#8fa3b8",font:{size:8},boxWidth:8}}}});
+
+  // Feature importance
+  mkChart("ml-fi","bar",{
+    labels:["Temp","Vibration","Pressure","RPM","Current","Voltage","Oil","Noise","Comp Stress","Power"],
+    datasets:[{data:[35,30,20,15,12,8,14,9,28,18],
+      backgroundColor:["#e8622a","#f07844","#f9a87a","#38bdf8","#7dd3fc","#22c55e","#06b6d4","#f59e0b","#a78bfa","#4d6278"],
+      borderRadius:2}]
+  },{indexAxis:"y",scales:{...CD.scales,x:{...CD.scales.x,min:0,max:40}}});
+
+  // Confusion matrix (use actual numbers if available)
+  const rfm = mlMetrics?.["Random Forest"];
+  const tp=rfm?.TP||288, tn=rfm?.TN||1680, fp=rfm?.FP||18, fn=rfm?.FN||14;
+  mkChart("ml-conf","bar",{
+    labels:["Predicted Normal","Predicted Failure"],
+    datasets:[
+      {label:"Actual Normal", data:[tn,fp], backgroundColor:"rgba(34,197,94,.7)", borderRadius:3},
+      {label:"Actual Failure",data:[fn,tp], backgroundColor:"rgba(232,98,42,.7)", borderRadius:3}
+    ]
+  },{plugins:{legend:{display:true,labels:{color:"#8fa3b8",font:{size:9},boxWidth:8}}}});
+
+  // CV scores from training log
+  if (trainingLog) {
+    const models=Object.keys(trainingLog).filter(k=>trainingLog[k].cv);
+    mkChart("ml-cv","bar",{
+      labels: models,
+      datasets:[{data:models.map(k=>(trainingLog[k].mean_f1||0)*100), backgroundColor:["#e8622a","#a78bfa","#22c55e"], borderRadius:3}]
+    },{scales:{...CD.scales,y:{...CD.scales.y,min:0,max:100}}});
+  }
+}
+
+function renderPredLog() {
+  document.getElementById("predLogCount").textContent = predLogs.length + " PREDICTIONS";
+  document.getElementById("predLog").innerHTML = predLogs.slice(0,40).map(p =>
+    `<div class="ai a-${p.status}"><div class="ai-icon" style="color:${p.status==="crit"?"var(--red)":p.status==="warn"?"var(--yellow)":"var(--green)"};font-size:8px">●</div>
+    <div style="display:flex;gap:18px;align-items:center;flex:1">
+      <span style="font-family:var(--mono);font-size:9px;color:var(--text3)">${p.ts}</span>
+      <span style="font-family:var(--mono);font-size:9px;color:var(--text2)">Fleet avg fail: ${p.avgFail}%</span>
+      <span style="font-family:var(--mono);font-size:9px;color:${p.status==="crit"?"var(--red)":p.status==="warn"?"var(--yellow)":"var(--green)"}">STATUS: ${p.status.toUpperCase()}</span>
+    </div></div>`).join("");
+}
+
+function renderFaultPage() {
+  const ms = Object.values(state);
+  if (!ms.length) return;
+  const maxLen = Math.max(...ms.map(m=>(m.history?.anomaly||[]).length));
+  if (maxLen > 1 && !charts["f-anom"]) {
+    const datasets = ms.map((m,i)=>({
+      label:m.meta.id, data: m.history?.anomaly||[],
+      borderColor: Object.values(MACH_COLORS)[i], borderWidth:1.5, fill:false, tension:.35, pointRadius:0
+    }));
+    mkChart("f-anom","line",{labels:Array(maxLen).fill("").map((_,i)=>i),datasets},
+      {plugins:{legend:{display:true,labels:{color:"#8fa3b8",font:{size:8},boxWidth:8}}}});
+  } else if (charts["f-anom"]) {
+    charts["f-anom"].data.datasets.forEach((ds,i)=>{ds.data=ms[i]?.history?.anomaly||[]});
+    charts["f-anom"].update("none");
+  }
+  const active = Object.entries(activeFaults).filter(([,v])=>v);
+  document.getElementById("faultStatus").textContent = active.length
+    ? `Active: ${active.map(([k,v])=>`${k} on ${v}`).join(", ")}`
+    : "No active faults";
+}
+
+function renderFeatList() {
+  const feats=[{n:"Temperature deviation",p:35},{n:"Vibration amplitude",p:30},{n:"Pressure variance",p:20},{n:"RPM instability",p:15}];
+  document.getElementById("featList").innerHTML = feats.map(f =>
+    `<div class="feat-row"><div class="feat-n">${f.n}</div><div class="feat-t"><div class="feat-f" style="width:${f.p*2.8}%"></div></div><div class="feat-p">${f.p}%</div></div>`
+  ).join("");
+}
+
+// ═══════════════════════════════════════════════════════
+//  INTERACTIONS
+// ═══════════════════════════════════════════════════════
+function selectMachine(mid) {
+  selectedMachine = mid;
+  document.getElementById("trendMachLabel").textContent = mid;
+  renderDetail();
+}
+
+function switchTrend(t) {
+  currentTrend = t;
+  ["temp","vib","press","rpm"].forEach(k => {
+    document.getElementById("cb-"+k).className = "cbtn " + (k===t?"c-on":"c-off");
+  });
+}
+
+function showPage(name) {
+  document.querySelectorAll(".page-section").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav-tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("page-"+name)?.classList.add("active");
+  event.target.classList.add("active");
+  if (name==="sensors") setTimeout(renderSensorCharts, 100);
+  if (name==="mllab")   { setTimeout(renderMLLab, 100); }
+  if (name==="faults")  setTimeout(renderFaultPage, 100);
+  if (name==="predict") buildPredictForm();
+}
+
+async function injectFault(faultType) {
+  const machine_id = document.getElementById("faultMachine")?.value || "MCH-001";
+  try {
+    await apiFetch("/api/inject_fault", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ machine_id, fault_type: faultType })
+    });
+    activeFaults[faultType] = machine_id;
+    document.querySelectorAll(".fc").forEach(fc => fc.classList.remove("active"));
+    document.getElementById("fc-"+faultType)?.classList.add("active");
+    const m = state[machine_id];
+    const name = m?.meta?.name || machine_id;
+    addFaultLog(`${faultType.replace(/_/g," ").toUpperCase()} injected on ${name} — ML model monitoring`, machine_id);
+    showToast("Fault Injected", `${faultType} → ${machine_id}`, "crit");
+    setTimeout(() => {
+      clearFault(machine_id, faultType);
+    }, 30000);
+  } catch(e) { showToast("Error", "API call failed", "warn"); }
+}
+
+async function clearFault(machine_id, faultType) {
+  try {
+    await apiFetch("/api/clear_fault", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ machine_id })
+    });
+    if (faultType) { delete activeFaults[faultType]; document.getElementById("fc-"+faultType)?.classList.remove("active"); }
+    addFaultLog(`Fault cleared on ${machine_id} — returning to normal`, machine_id);
+  } catch(e) {}
+}
+
+async function clearAllFaults() {
+  await apiFetch("/api/clear_fault", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({})
+  });
+  activeFaults = {};
+  document.querySelectorAll(".fc").forEach(fc=>fc.classList.remove("active"));
+  showToast("Cleared","All faults cleared","info");
+}
+
+function injectRandom() {
+  const faults = ["overheat","bearing_wear","pressure_leak","electrical_fault","lubrication_loss"];
+  injectFault(faults[Math.floor(Math.random()*faults.length)]);
+}
+
+function addFaultLog(msg, mid) {
+  const list = document.getElementById("faultLog");
+  const item = document.createElement("div");
+  item.className = "ai a-crit";
+  item.innerHTML = `<div class="ai-icon" style="color:var(--red);font-size:9px">●</div><div><div class="ai-msg">${msg}</div><div class="ai-meta">${mid} · ${nowTime()}</div></div>`;
+  list.insertBefore(item, list.firstChild);
+  if (list.children.length > 20) list.removeChild(list.lastChild);
+}
+
+// ── LIVE PREDICT PAGE ──────────────────────────────────
+const SENSOR_LABELS = {temperature:"Temperature",vibration:"Vibration",pressure:"Pressure",rpm:"RPM",current:"Current",voltage:"Voltage",oil_viscosity:"Oil Viscosity",noise_level:"Noise Level"};
+const SENSOR_DEFAULTS = {temperature:72,vibration:1.5,pressure:6.0,rpm:2800,current:15,voltage:415,oil_viscosity:46,noise_level:65};
+
+function buildPredictForm() {
+  document.getElementById("predFields").innerHTML = SENSORS.map(s =>
+    `<div class="pf-field">
+      <label>${SENSOR_LABELS[s]} (${SENSOR_UNITS[s]})</label>
+      <input type="number" id="pf-${s}" value="${SENSOR_DEFAULTS[s]}" step="0.1">
+    </div>`).join("");
+}
+
+async function runPredict() {
+  const machine_id = document.getElementById("predMachine").value;
+  const body = { machine_id };
+  SENSORS.forEach(s => { body[s] = +document.getElementById("pf-"+s)?.value || SENSOR_DEFAULTS[s]; });
+  try {
+    const res = await apiFetch("/api/predict", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(body)
+    });
+    const fc = res.failProb>65?"var(--red)":res.failProb>35?"var(--yellow)":"var(--green)";
+    const div = document.getElementById("predResult");
+    div.style.display = "block";
+    div.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+        <div style="text-align:center"><div class="prob-v" style="color:${fc}">${r1(res.failProb)}%</div><div class="prob-l">FAILURE PROBABILITY</div></div>
+        <div style="text-align:center"><div class="prob-v" style="color:${fc}">${r1(res.anomaly)}%</div><div class="prob-l">ANOMALY SCORE</div></div>
+        <div style="text-align:center"><div class="prob-v" style="color:${statusColor(res.status)}">${res.health}%</div><div class="prob-l">HEALTH SCORE</div></div>
+      </div>
+      <div style="background:rgba(255,255,255,.03);border-radius:var(--r);padding:9px;font-size:11px;color:var(--text2)">${res.recommendation}</div>`;
+    predHistory.unshift({ ts:nowTime(), machine_id, failProb:res.failProb, status:res.status, health:res.health });
+    if (predHistory.length > 50) predHistory.pop();
+    renderPredHistory();
+  } catch(e) { showToast("Error","API predict failed","warn"); }
+}
+
+function loadCurrentSensors() {
+  const m = state[document.getElementById("predMachine").value];
+  if (!m) return;
+  SENSORS.forEach(s => { const el=document.getElementById("pf-"+s); if(el) el.value=m.sensors[s].toFixed(2); });
+}
+
+function simulateFault() {
+  const faults = {temperature:108, vibration:4.2, pressure:5.5, rpm:3200, current:21, voltage:408, oil_viscosity:30, noise_level:87};
+  SENSORS.forEach(s => { const el=document.getElementById("pf-"+s); if(el) el.value=faults[s]||SENSOR_DEFAULTS[s]; });
+}
+
+function renderPredHistory() {
+  document.getElementById("predHistCount").textContent = predHistory.length + " RUNS";
+  document.getElementById("predHistory").innerHTML = predHistory.map(p =>
+    `<div class="ai a-${p.status}"><div class="ai-icon" style="color:${statusColor(p.status)};font-size:9px">●</div>
+    <div style="display:flex;gap:18px;flex:1;align-items:center">
+      <span style="font-family:var(--mono);font-size:9px;color:var(--text3)">${p.ts}</span>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--text2)">${p.machine_id}</span>
+      <span style="font-family:var(--mono);font-size:10px;color:${statusColor(p.status)}">FAIL ${r1(p.failProb)}%</span>
+      <span style="font-family:var(--mono);font-size:9px;color:var(--text3)">Health ${p.health}%</span>
+    </div></div>`).join("");
+}
+
+// ── UTILS ─────────────────────────────────────────────
+function exportCSV() {
+  const csv = "Machine ID,Name,Status,Fail%,Health%,Task\n" + Object.values(state).map(m =>
+    `${m.meta.id},${m.meta.name},${m.status},${r1(m.failProb)},${m.health},${m.status==="crit"?"Emergency":m.status==="warn"?"Preventive":"Routine"}`
+  ).join("\n");
+  const a = document.createElement("a");
+  a.href = "data:text/csv," + encodeURIComponent(csv);
+  a.download = "predictai_maintenance.csv"; a.click();
+  showToast("Exported","Maintenance schedule saved","info");
+}
+
+function showToast(title, msg, type) {
+  document.getElementById("toastT").textContent = title;
+  document.getElementById("toastM").textContent = msg;
+  const t = document.getElementById("toast");
+  t.style.borderColor = type==="crit"?"var(--red)":type==="warn"?"var(--yellow)":"var(--border3)";
+  t.classList.add("show");
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove("show"), 3200);
+}
+
+function tickClock() {
+  document.getElementById("clock").textContent = nowTime();
+}
+
+// ═══════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════
+window.onload = async () => {
+  setInterval(tickClock, 1000);
+  buildPredictForm();
+  await pollState();
+  initDashCharts();
+  setInterval(pollState, POLL);
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+{
+  "Random Forest": {
+    "Accuracy": 1.0,
+    "Precision": 1.0,
+    "Recall": 1.0,
+    "F1-Score": 1.0,
+    "AUC-ROC": 1.0,
+    "Avg Precision": 1.0,
+    "MCC": 1.0,
+    "Specificity": 1.0,
+    "TP": 288.0,
+    "TN": 2112.0,
+    "FP": 0.0,
+    "FN": 0.0
+  },
+  "Isolation Forest": {
+    "Accuracy": 0.8638,
+    "Precision": 0.4617,
+    "Recall": 0.816,
+    "F1-Score": 0.5897,
+    "AUC-ROC": 0.9318,
+    "Avg Precision": 0.686,
+    "MCC": 0.5455,
+    "Specificity": 0.8703,
+    "TP": 235.0,
+    "TN": 1838.0,
+    "FP": 274.0,
+    "FN": 53.0
+  },
+  "SVM (RBF)": {
+    "Accuracy": 1.0,
+    "Precision": 1.0,
+    "Recall": 1.0,
+    "F1-Score": 1.0,
+    "AUC-ROC": 1.0,
+    "Avg Precision": 1.0,
+    "MCC": 1.0,
+    "Specificity": 1.0,
+    "TP": 288.0,
+    "TN": 2112.0,
+    "FP": 0.0,
+    "FN": 0.0
+  },
+  "Gradient Boosting": {
+    "Accuracy": 0.9996,
+    "Precision": 0.9965,
+    "Recall": 1.0,
+    "F1-Score": 0.9983,
+    "AUC-ROC": 1.0,
+    "Avg Precision": 1.0,
+    "MCC": 0.998,
+    "Specificity": 0.9995,
+    "TP": 288.0,
+    "TN": 2111.0,
+    "FP": 1.0,
+    "FN": 0.0
+  },
+  "Ensemble": {
+    "Accuracy": 0.9996,
+    "Precision": 0.9965,
+    "Recall": 1.0,
+    "F1-Score": 0.9983,
+    "AUC-ROC": 1.0,
+    "Avg Precision": 1.0,
+    "MCC": 0.998,
+    "Specificity": 0.9995,
+    "TP": 288.0,
+    "TN": 2111.0,
+    "FP": 1.0,
+    "FN": 0.0
+  }
+}
